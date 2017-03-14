@@ -12,39 +12,45 @@ var LOT_HEIGHT = 8;
 var LOT_SCALE = 10;
 
 class Entity{
-	constructor(x, y){
+	constructor(x, y, rotation){
 		this.x = x;
 		this.y = y;
+		this.anchor = {x:0, y:0};
+		this.rotation = rotation || 0;
+	}
+	draw(ctx){
+		ctx.beginPath();
+		ctx.ellipse(this.x, this.y, 5, 5, 0, 0, 2 * Math.PI);
+		ctx.fill();
+		
+		ctx.save();
+		ctx.translate(this.x, this.y);
+		ctx.translate(this.anchor.x, this.anchor.y);
+		ctx.rotate(this.rotation * Math.PI/180);
+		ctx.translate(-this.anchor.x, -this.anchor.y);
+		this.drawPrimitive(ctx);
+		ctx.restore();
 	}
 }
 
 class Lot extends Entity{
 	constructor(x, y, rotation){
-		super(x, y);
-		this.rotation = rotation;
+		super(x, y, rotation);
 		this.width = LOT_WIDTH * LOT_SCALE;
 		this.height = LOT_HEIGHT * LOT_SCALE;
 		this.id = getId();
+		this.anchor.x = this.width/2;
+		this.anchor.y = this.height/2;
 	}
-	draw(ctx){
-		//Origin
-		// ctx.beginPath();
-		// ctx.ellipse(this.x, this.y, 5, 5, 0, 0, 2 * Math.PI);
-		// ctx.fill();
+	drawPrimitive(ctx){
+		ctx.fillText(this.id, this.anchor.x, this.anchor.y);
 		
-		ctx.fillText(""+this.id, this.x, this.y);
-	
-		//Lines
-		ctx.save();
-		ctx.translate(this.x, this.y);
-		ctx.rotate(this.rotation * Math.PI/180);
 		ctx.beginPath();
-		ctx.moveTo(-this.width/2, -this.height/2);
-		ctx.lineTo(-this.width/2, this.height/2);
-		ctx.lineTo(this.width/2, this.height/2);
-		ctx.lineTo(this.width/2, -this.height/2);
+		ctx.moveTo(0, this.height);
+		ctx.lineTo(0, 0);
+		ctx.lineTo(this.width, 0);
+		ctx.lineTo(this.width, this.height);
 		ctx.stroke();
-		ctx.restore();
 	}
 }
 
@@ -58,29 +64,21 @@ class LotGroup extends Entity{
 		this.height = 2 * this.lotHeight;
 		this.rotation = 0;
 		
+		this.anchor.y = this.lotHeight;
+		
 		
 		this.lots = [];
 		for(var i = 0; i < length; i++){
-			this.lots.push(new Lot(i * LOT_WIDTH * LOT_SCALE, 0, 0));
+			this.lots.push(new Lot(i * LOT_WIDTH * LOT_SCALE, 0, 180));
 		}
 		for(var i = 0; i < length; i++){
-			this.lots.push(new Lot(i * LOT_WIDTH * LOT_SCALE, LOT_HEIGHT * LOT_SCALE, 180));
+			this.lots.push(new Lot(i * LOT_WIDTH * LOT_SCALE, LOT_HEIGHT * LOT_SCALE, 0));
 		}
 	}
-	draw(ctx){
-		
-		ctx.beginPath();
-		ctx.ellipse(this.x, this.y, 5, 5, 0, 0, 2 * Math.PI);
-		ctx.fill();
-		
-		ctx.save();
-		ctx.translate(this.x, this.y);
-		ctx.rotate(this.rotation * Math.PI/180);
-		ctx.translate(this.lotWidth/2, -this.lotHeight/2); //Anchor point
+	drawPrimitive(ctx){
 		for(var i = 0; i < this.lots.length; i++){
 			this.lots[i].draw(ctx);
 		}
-		ctx.restore();
 	}
 }
 
@@ -106,7 +104,7 @@ function getId(){
 var frame = 0;
 function render(){
 	objects[0].rotation+=1;
-	//objects[1].rotation+=1;
+	objects[1].rotation+=2;
 	
 	//Clear buffer
 	ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
