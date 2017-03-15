@@ -5,9 +5,11 @@ class ValueSetter{
     this.callback = callback;
   }
   getElement(){
-    return `<td>${this.label}: </td>
-            <td><input id="${this.id}"></input><td>
-            <td><input type="button" id="${this.id}_button" value="Set"></input></td>`;
+    return `<div id="${this.id}">
+            <td>${this.label}: </td>
+            <td><input type="text" id="${this.id}_input"></input><td>
+            <td><input type="submit" id="${this.id}_button" value="Set"></input></td>
+            </div>`;
   }
 }
 
@@ -34,10 +36,16 @@ class Inspector{
     for(var i = 0; i < this.accessors.length; i++){
       let id = this.accessors[i].id;
       let callback = this.accessors[i].callback;
-      document.getElementById(id + "_button").onclick = function(){
-        var val = parseInt(document.getElementById(id).value, 10);
-        document.getElementById(id).value = "";
+      let handler = function(){
+        var val = document.getElementById(id + "_input").value;
+        document.getElementById(id + "_input").value = "";
         callback(val);
+      }
+      document.getElementById(id + "_button").onclick=handler;
+      document.getElementById(id + "_input").onkeypress=function(e){ //Handle enter key press
+        console.log("test");
+        if(e && e.keyCode != 13) return;
+        handler();
       }
     }
   }

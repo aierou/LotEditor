@@ -166,7 +166,7 @@ window.onload = function(){
   root.addChild(new SpotGroup(500, 400, 3));
   root.children[1].rotation = 45;
 
-  render();
+  tick();
 }
 var dragging = [];
 var dragged = false;
@@ -200,15 +200,25 @@ function mouseUp(evt){
 
   selectAtPosition(pos.x, pos.y);
 }
+var currentMouse;
 function mouseMove(evt){
   var pos = getMousePosition(evt);
+  //For some reason, mousemove is called for all mouse events.
+  //Here we check to see if the mouse actually moved.
+  if(currentMouse != null && currentMouse.x==pos.x && currentMouse.y==pos.y){
+    return;
+  }
+  currentMouse = pos;
+  //We want to try a drag if the mouse was moved while the mouse button is being held.
+  //This is done to make dragging feel better.
   if(dragposition != null){
-    selectAtPosition(dragposition.x, dragposition.y, false); //This was done to make dragging feel better
+    selectAtPosition(dragposition.x, dragposition.y, false); //Don't descend as this selection is only for dragging
     startDrag(dragposition.x, dragposition.y);
     dragposition = null;
   }
-
-  if(mouseIsDown) dragged = true; //We want to set this even when we aren't dragging something
+  //We want to set this even when we aren't dragging something
+  //This is so select isn't called on mouse release if we dragged
+  if(mouseIsDown) dragged = true;
   if(dragging.length > 0){
     for(var i = 0; i < dragging.length; i++){
       dragging[i].entity.x = pos.x-dragging[i].offset.x;
@@ -328,7 +338,7 @@ function cloneMatrix(m){
 }
 
 var frame = 0;
-function render(){
+function tick(){
 
   //Clear buffer
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -341,7 +351,7 @@ function render(){
     selection[i].drawBounds(ctx);
   }
 
-  window.requestAnimationFrame(render);
+  window.requestAnimationFrame(tick);
 }
 
 //http://stackoverflow.com/a/7397026

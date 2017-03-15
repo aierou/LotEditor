@@ -6,9 +6,13 @@
 		window.onload = function(){
       var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
       i.addAccessor(new ValueSetter("length", function(val){
+        val = parseInt(val, 10);
+        if(isNaN(val)) return;
         parent.inspecting.setLength(val);
       }, "Length"));
       i.addAccessor(new ValueSetter("rotation", function(val){
+        val = parseInt(val, 10);
+        if(isNaN(val)) return;
         parent.inspecting.rotation = val;
       }, "Rotation"));
 
@@ -19,7 +23,7 @@
 	<link rel="stylesheet" href="inspector.css">
 </head>
 <body>
-	<div id="title">Spot Group</div>
+	<div id="title">Parking Spot Group</div>
   <div id="inspector"></div>
 </body>
 </html>

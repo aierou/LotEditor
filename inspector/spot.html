@@ -5,15 +5,24 @@
 	<script>
     window.onload = function(){
       document.getElementById("subtitle").innerHTML = "ID: " + parent.inspecting.id;
+
+      var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
+      i.addAccessor(new ValueSetter("id", function(val){
+        parent.inspecting.id = val;
+      }, "ID"));
+      i.addAccessor(new ValueSetter("rotation", function(val){
+        val = parseInt(val, 10);
+        if(isNaN(val)) return;
+        parent.inspecting.rotation = val;
+      }, "Rotation"));
+      i.build();
     }
 	</script>
 	<link rel="stylesheet" href="inspector.css">
 </head>
 <body>
-	<div id="title">Spot</div>
+	<div id="title">Parking Spot</div>
   <div id="subtitle"></div>
-	<span>ID: </span>
-	<input id="id"></input>
-	<input type="button" id="id_button" value="Set"></input>
+  <div id="inspector"></div>
 </body>
 </html>

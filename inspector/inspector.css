@@ -15,6 +15,9 @@ body{
 	font-size:15px;
 	padding-bottom:10px;
 }
+#inspector input[type=text]{
+  max-width: 120px;
+}
 
 .center{
   position: relative;
