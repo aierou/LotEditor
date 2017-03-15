@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="inspector.js"></script>
+	<script>
+		window.onload = function(){
+      var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
+      i.addAccessor(new ValueSetter("length", function(val){
+        parent.inspecting.setLength(val);
+      }, "Length"));
+      i.addAccessor(new ValueSetter("rotation", function(val){
+        parent.inspecting.rotation = val;
+      }, "Rotation"));
+
+      i.build();
+
+		}
+	</script>
+	<link rel="stylesheet" href="inspector.css">
+</head>
+<body>
+	<div id="title">Spot Group</div>
+  <div id="inspector"></div>
+</body>
+</html>

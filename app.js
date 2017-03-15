@@ -8,10 +8,10 @@ var root;
 
 var SELECTION_PADDING = 3;
 
-//Default lot parameters
-var LOT_WIDTH = 4;
-var LOT_HEIGHT = 8;
-var LOT_SCALE = 10;
+//Default spot parameters
+var SPOT_WIDTH = 4;
+var SPOT_HEIGHT = 8;
+var SPOT_SCALE = 10;
 
 class Entity{
   constructor(x, y, type, rotation){
@@ -31,6 +31,15 @@ class Entity{
     child.parent = this;
     this.children.push(child);
   }
+  removeAllChildren(){
+    for(var i = 0; i < entities.length; i++){
+      if(entities[i].parent == this){
+        entities.splice(i,1);
+        i--;
+      }
+    }
+    this.children = [];
+  }
   draw(ctx){
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -44,6 +53,12 @@ class Entity{
     for(var i = 0; i < this.children.length; i++){
       this.children[i].draw(ctx);
     }
+    ctx.restore();
+
+    //Annotations
+    ctx.save();
+    ctx.resetTransform();
+    this.drawAnnotations(ctx);
     ctx.restore();
   }
   drawBounds(ctx){
@@ -63,6 +78,9 @@ class Entity{
   drawPrimitive(ctx){
     //Override
   }
+  drawAnnotations(ctx){
+    //Override
+  }
   hitTest(x, y){
     if(this.width && this.height){
       var test = transformPoint({x:x, y:y}, this._matrix.inverse());
@@ -71,19 +89,17 @@ class Entity{
   }
 }
 
-class Lot extends Entity{
+class Spot extends Entity{
   constructor(x, y, rotation){
-    super(x, y, "Lot", rotation);
+    super(x, y, "Spot", rotation);
     this.selectable = true;
-    this.width = LOT_WIDTH * LOT_SCALE;
-    this.height = LOT_HEIGHT * LOT_SCALE;
-    this.id = getId(); //auto-incrementing lot id
+    this.width = SPOT_WIDTH * SPOT_SCALE;
+    this.height = SPOT_HEIGHT * SPOT_SCALE;
+    this.id = getId(); //auto-incrementing spot id
     this.anchor.x = this.width/2;
     this.anchor.y = this.height/2;
   }
   drawPrimitive(ctx){
-    ctx.fillText(this.id, this.anchor.x, this.anchor.y);
-
     ctx.beginPath();
     ctx.moveTo(0, this.height);
     ctx.lineTo(0, 0);
@@ -91,27 +107,35 @@ class Lot extends Entity{
     ctx.lineTo(this.width, this.height);
     ctx.stroke();
   }
+  drawAnnotations(ctx){
+    var p = this.getAnchorCanvasPosition();
+    ctx.fillText(this.id, p.x, p.y);
+  }
 }
 
-class LotGroup extends Entity{
+class SpotGroup extends Entity{
   constructor(x, y, length){
-    super(x, y, "LotGroup");
+    super(x, y, "SpotGroup");
     this.selectable = true;
-    this.lotWidth = LOT_WIDTH * LOT_SCALE;
-    this.lotHeight = LOT_HEIGHT * LOT_SCALE;
-    this.width = length * this.lotWidth;
-    this.height = 2 * this.lotHeight;
+    this.spotWidth = SPOT_WIDTH * SPOT_SCALE;
+    this.spotHeight = SPOT_HEIGHT * SPOT_SCALE;
     this.rotation = 0;
+    this.length = length;
 
-    this.anchor.y = this.lotHeight;
+    this.anchor.y = this.spotHeight;
 
-
+    this.setLength(length);
+  }
+  setLength(length){
+    this.removeAllChildren();
     for(var i = 0; i < length; i++){
-      this.addChild(new Lot(i * LOT_WIDTH * LOT_SCALE, 0, 180));
+      this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, 0, 180));
     }
     for(var i = 0; i < length; i++){
-      this.addChild(new Lot(i * LOT_WIDTH * LOT_SCALE, LOT_HEIGHT * LOT_SCALE, 0));
+      this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, SPOT_HEIGHT * SPOT_SCALE, 0));
     }
+    this.width = length * this.spotWidth;
+    this.height = 2 * this.spotHeight;
   }
 }
 
@@ -131,45 +155,108 @@ window.onload = function(){
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
   ctx = enhanceContext(canvas.getContext("2d"));
-  canvas.addEventListener("click", click);
+  canvas.addEventListener("mousedown", mouseDown);
+  canvas.addEventListener("mouseup", mouseUp);
+  canvas.addEventListener("mousemove", mouseMove);
 
   entities = [];
   root = new Entity(0, 0);
   root.selectable = false;
-  root.addChild(new Lot(500, 200, 135));
-  root.addChild(new LotGroup(500, 400, 3));
+  root.addChild(new Spot(500, 200, 135));
+  root.addChild(new SpotGroup(500, 400, 3));
   root.children[1].rotation = 45;
 
   render();
 }
+var dragging = [];
+var dragged = false;
+var dragposition = null;
+var mouseIsDown = false;
+function startDrag(x, y){
+  dragging = [];
+  dragged = false;
+  if(selection.length > 0){
+    for(var i = 0; i < selection.length; i++){
+      if(selection[i].parent && !selection[i].parent.selectable){
+        dragging.push({offset:{x:x-selection[i].x, y:y-selection[i].y}, entity:selection[i]});
+      }
+    }
+  }
+}
+function mouseDown(evt){
+  mouseIsDown = true;
+  var pos = getMousePosition(evt);
+  dragposition = {x:pos.x, y:pos.y};
+}
+function mouseUp(evt){
+  dragging = [];
+  dragposition = null;
+  mouseIsDown = false;
+  if(dragged){
+    dragged = false;
+    return;
+  } //If we dragged, we don't want to select on release
+  var pos = getMousePosition(evt);
 
-function click(evt){
+  selectAtPosition(pos.x, pos.y);
+}
+function mouseMove(evt){
+  var pos = getMousePosition(evt);
+  if(dragposition != null){
+    selectAtPosition(dragposition.x, dragposition.y, false); //This was done to make dragging feel better
+    startDrag(dragposition.x, dragposition.y);
+    dragposition = null;
+  }
+
+  if(mouseIsDown) dragged = true; //We want to set this even when we aren't dragging something
+  if(dragging.length > 0){
+    for(var i = 0; i < dragging.length; i++){
+      dragging[i].entity.x = pos.x-dragging[i].offset.x;
+      dragging[i].entity.y = pos.y-dragging[i].offset.y;
+    }
+  }
+}
+function getMousePosition(evt){
   var rect = canvas.getBoundingClientRect();
-    var x = evt.clientX - rect.left;
-    var y = evt.clientY - rect.top;
-
+  var x = evt.clientX - rect.left;
+  var y = evt.clientY - rect.top;
+  return {x:x, y:y};
+}
+function selectAtPosition(x, y, descend){
+  if(descend == null) descend = true;
   var hit = false;
   for(var i = 0; i < entities.length; i ++){
     if(entities[i].hitTest(x, y)){
       hit = true;
-      if(select(entities[i])) break;
+      if(select(entities[i], descend)) break;
     }
   }
-  if(!hit) selection = [];
+  if(!hit){
+    selection = [];
+    updateInspector();
+  }
+}
+function selectAll(){
+  selection = [];
+  for(var i = 0; i < entities.length; i ++){
+    selection.push(entities[i]);
+  }
 }
 
 //Current selection model is to allow the selection of child elements as sub-selections.
 //The active selection for inspectors should be on top of the stack e.g. selection[selection.length - 1];
 
 var selection = [];
-function select(entity){
+function select(entity, descend){
+  if(descend == null) descend = true;
   if(!entity.selectable || selection.find(a => a == entity)) return false; //If entity is not selectable or is already selected, return
   if(entity.parent && entity.parent.selectable){
-    if(selection.find(a => a == entity.parent)){
+    if(descend && selection.find(a => a == entity.parent)){
       //deselect siblings
       deselect(entity.parent);
       selection.push(entity.parent);
       selection.push(entity);
+      updateInspector();
       return true;
     }else{
       return select(entity.parent); //Search up to find root selectable entity
@@ -177,6 +264,7 @@ function select(entity){
   }else{
     selection = [];
     selection.push(entity);
+    updateInspector();
     return true;
   }
 }
@@ -189,6 +277,30 @@ function deselect(entity){
     if(selection[i].parent == entity){
       deselect(selection[i]);
     }
+  }
+  updateInspector();
+}
+
+var inspecting;
+function updateInspector(){
+  inspecting = null;
+  if(selection.length > 0) inspecting = selection[selection.length - 1];
+  if(inspecting){
+    var src;
+    switch(inspecting.type){
+      case "Spot":
+        src = "inspector/spot.html";
+      break;
+      case "SpotGroup":
+        src = "inspector/spotgroup.html";
+      break;
+      default:
+        src = "inspector/default.html";
+      break;
+    }
+    document.getElementById("inspector").src = src;
+  }else{
+    document.getElementById("inspector").src = "inspector/default.html";
   }
 }
 
@@ -220,12 +332,6 @@ function render(){
 
   //Clear buffer
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-  //Wheeeeee
-  //TODO: remove
-  for(var i = 1; i < entities.length; i++){
-    entities[i].rotation+=1;
-  }
 
   //Start drawing from root entity
   root.draw(ctx);
