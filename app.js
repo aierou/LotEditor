@@ -15,6 +15,7 @@ window.onload = function(){
   canvas.addEventListener("mousedown", mouseDown);
   canvas.addEventListener("mouseup", mouseUp);
   canvas.addEventListener("mousemove", mouseMove);
+  canvas.addEventListener("wheel", mouseScroll);
 
   entities = new EntityManager();
   root = new Entity(0, 0);
@@ -33,6 +34,23 @@ function setScale(scale){
   currentScale = scale;
   ctx.resetTransform();
   ctx.scale(scale, scale);
+}
+
+function setOffset(x, y){
+  ctx.resetTransform();
+  ctx.scale(currentScale, currentScale);
+  ctx.translate(x, y);
+}
+
+function mouseScroll(evt){
+  var pos1 = getTransformedMousePosition(evt);
+  if(evt.deltaY > 0){
+    setScale(currentScale * .9);
+  }else if(evt.deltaY < 0){
+    setScale(currentScale * (1/.9));
+  }
+  var pos2 = getTransformedMousePosition(evt);
+  setOffset(pos2.x - pos1.x, pos2.y - pos1.y);
 }
 
 var dragging = [];
@@ -69,7 +87,7 @@ function mouseUp(evt){
 }
 var currentMouse;
 function mouseMove(evt){
-  var pos = getScaledMousePosition(evt);
+  var pos = getTransformedMousePosition(evt);
   //For some reason, mousemove is called for all mouse events.
   //Here we check to see if the mouse actually moved.
   if(currentMouse != null && currentMouse.x==pos.x && currentMouse.y==pos.y){
@@ -83,7 +101,7 @@ function mouseMove(evt){
     //Also, hitTest transforms the testing point, so we want raw input there whereas
     //we want scaled input for startDrag.
     selectAtPosition(dragposition.x, dragposition.y, false);
-    var scaledDragPosition = getScaledPoint(dragposition);
+    var scaledDragPosition = getTransformedPoint(dragposition);
     startDrag(scaledDragPosition.x, scaledDragPosition.y);
     dragposition = null;
   }
@@ -103,14 +121,12 @@ function getMousePosition(evt){
   var y = evt.clientY - rect.top;
   return {x:x, y:y};
 }
-function getScaledMousePosition(evt){
-  var rect = canvas.getBoundingClientRect();
-  var x = evt.clientX - rect.left;
-  var y = evt.clientY - rect.top;
-  return {x:x*(1/currentScale), y:y*(1/currentScale)};
+function getTransformedMousePosition(evt){
+  var pos = getMousePosition(evt);
+  return transformPoint(pos, ctx._matrix.inverse());
 }
-function getScaledPoint(p){
-  return {x:p.x*(1/currentScale), y:p.y*(1/currentScale)};
+function getTransformedPoint(p){
+  return transformPoint(p, ctx._matrix.inverse());
 }
 function selectAtPosition(x, y, descend){
   if(descend == null) descend = true;
@@ -194,11 +210,33 @@ function updateInspector(){
   }
 }
 
+function serialize(){
+  return JSON.stringify(entities);
+}
+function serializeSpots(){
+  var spots = [];
+  for(var i = 0; i < entities.length; i++){
+    if(entities[i].type == "Spot"){
+      var pos = getTransformedPoint(entities[i].getAnchorCanvasPosition());
+      spots.push({x:pos.x, y:pos.y, id:entities[i].id});
+    }
+  }
+  return JSON.stringify(spots);
+}
+
 var frame = 0;
 function tick(){
 
+  //Background
+  ctx.save();
+  ctx.fillStyle = "#aaaaaa";
+  var start = getTransformedPoint({x:0, y:0});
+  var end = getTransformedPoint({x:CANVAS_WIDTH, y:CANVAS_HEIGHT});
+  ctx.fillRect(start.x, start.y, end.x-start.x, end.y-start.y);
+  ctx.restore();
+
   //Clear buffer
-  ctx.clearRect(0, 0, CANVAS_WIDTH*(1/currentScale), CANVAS_HEIGHT*(1/currentScale));
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   //Start drawing from root entity
   root.draw(ctx);

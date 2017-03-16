@@ -54,7 +54,7 @@
   var dragging;
   function startDrag(entity, evt){
     var pos = getMousePosition(evt);
-    var offset = {x: pos.x-entity.x-5, y: pos.y-entity.y-5};
+    var offset = {x: pos.x-entity.x, y: pos.y-entity.y};
     var clone = entity.clone();
     clone.x = (SELECTION_PADDING + 2);
     clone.y = (SELECTION_PADDING + 2);
@@ -67,12 +67,11 @@
     clone.draw(context);
     clone.drawBounds(context);
     var updateDrag = function(x, y){
-      var style = `position: absolute; z-index:10000; left: ${x-dragging.offset.x}px; top: ${y-dragging.offset.y}px;`
+      var style = `position: absolute; z-index:10000; left: ${x-(dragging.offset.x-4)}px; top: ${y-(dragging.offset.y-4)}px;`
       dragging.elem.style = style;
     }
     dragging = {entity:clone, offset:offset, elem:elem, updateDrag:updateDrag};
     updateDrag(evt.clientX, evt.clientY);
-    //entities.push(test);
   }
   function mouseDown(evt){
     if(hover.length == 0) return;
@@ -101,12 +100,12 @@
     if(dragging){
       var rect = parent.canvas.getBoundingClientRect();
       if(evt.clientX >= rect.left && evt.clientX <= rect.right && evt.clientY >= rect.top && evt.clientY <= rect.bottom){
-        var entity = parent.root.addChild(new dragging.entity.constructor(...dragging.entity.constructorArgs));
+        var entity = parent.root.addChild(new parent.classes[dragging.entity.type](...dragging.entity.constructorArgs));
         parent.select(entity);
-        var position = parent.getScaledMousePosition(evt);
-        //4 seems to be a magic number. Could be tied to margins, but I don't know.
-        position.x += -dragging.offset.x + 4;
-        position.y += -dragging.offset.y + 4;
+        var position = parent.getTransformedMousePosition(evt);
+        //8 seems to be a magic number. Could be tied to margins, but I don't know.
+        position.x += -(dragging.offset.x) + (8*1/parent.currentScale);
+        position.y += -(dragging.offset.y) + (8*1/parent.currentScale);
         entity.x = position.x;
         entity.y = position.y;
       }

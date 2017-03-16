@@ -3,7 +3,8 @@ var SPOT_HEIGHT = 8;
 var SPOT_SCALE = 10;
 var SELECTION_PADDING = 3;
 
-class EntityManager extends Array{
+var classes = {};
+classes["EntityManager"] = class extends Array{
   constructor(){
     super(...arguments);
     this.id = 0;
@@ -23,12 +24,12 @@ class EntityManager extends Array{
   }
 }
 
-class Entity{
+classes["Entity"] = class{
   constructor(x, y, type, rotation){
     this.children = [];
     this.x = x;
     this.y = y;
-    this.type = type;
+    this.type = type || "Entity";
     this.rotation = rotation || 0;
     this.anchor = {x:0, y:0};
     this.selectable = true;
@@ -36,7 +37,7 @@ class Entity{
   getAnchorCanvasPosition(){ //Can return null
     return this._anchor;
   }
-  clone(toParent, scoped){
+  clone(toParent){
     var clone = new this.constructor();
     Object.assign(clone, this);
     if(toParent != null){
@@ -46,7 +47,7 @@ class Entity{
     var oldChildren = Object.assign([], clone.children);
     clone.children = [];
     for(var i = 0; i < oldChildren.length; i++){
-      oldChildren[i].clone(clone, scoped);
+      oldChildren[i].clone(clone);
     }
     return clone;
   }
@@ -122,7 +123,7 @@ class Entity{
   }
 }
 
-class Spot extends Entity{
+classes["Spot"] = class extends classes["Entity"]{
   constructor(x, y, rotation){
     super(x, y, "Spot", rotation);
     this.constructorArgs = Array.from(arguments);
@@ -149,7 +150,7 @@ class Spot extends Entity{
   }
 }
 
-class SpotGroup extends Entity{
+classes["SpotGroup"] = class extends classes["Entity"]{
   constructor(x, y, length){
     super(x, y, "SpotGroup");
     this.constructorArgs = Array.from(arguments);
@@ -174,7 +175,7 @@ class SpotGroup extends Entity{
     this.height = 2 * this.spotHeight;
   }
 }
-class Label extends Entity{
+classes["Label"] = class extends classes["Entity"]{
   constructor(x, y, text, width, font){
     super(x, y, "Label");
     this.constructorArgs = Array.from(arguments);
@@ -191,7 +192,7 @@ class Label extends Entity{
   }
 }
 
-class DebugPoint extends Entity{
+classes["DebugPoint"] = class extends classes["Entity"]{
   constructor(x, y){
     super(x, y, "DebugPoint");
     this.selectable = false;
@@ -201,6 +202,12 @@ class DebugPoint extends Entity{
     ctx.ellipse(0, 0, 5, 5, 0, 0, 2 * Math.PI);
     ctx.fill();
   }
+}
+
+//Can't natively refer to classes dynamically, so we have to implement this hacky solution.
+//The other solution would be a map, but I don't want to maintain a list of classes separate to their definitions
+for(var className in classes){
+  this[className] = classes[className];
 }
 
 //Helper functions

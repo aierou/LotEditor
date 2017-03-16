@@ -43,7 +43,6 @@ class Inspector{
       }
       document.getElementById(id + "_button").onclick=handler;
       document.getElementById(id + "_input").onkeypress=function(e){ //Handle enter key press
-        console.log("test");
         if(e && e.keyCode != 13) return;
         handler();
       }
