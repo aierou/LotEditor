@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="prototypes.css">
+  <script src="entities.js"></script>
+  <script>
+  var CANVAS_WIDTH = 200;
+  var CANVAS_HEIGHT = 720;
+
+  var canvas;
+  var ctx;
+  var root;
+  var entities;
+
+  window.onload = function(){
+    canvas = document.getElementById("canvas");
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    ctx = enhanceContext(canvas.getContext("2d"));
+    canvas.addEventListener("mousedown", mouseDown);
+    document.addEventListener("mouseup", mouseUp);
+    canvas.addEventListener("mousemove", mouseMove);
+    document.addEventListener("mousemove", docMouseMove)
+
+    getId = function(){
+      return "n";
+    }
+
+    root = new Entity(0, 0);
+    rootui = new Entity(0, 0);
+    entities = new EntityManager();
+    entities.getId = function(){
+      return "n";
+    }
+    entities.push(root);
+    entities.push(rootui);
+    rootui.addChild(new Label(10, 10, "Object Prototypes", 200, "20px sans-serif"));
+    root.addChild(new SpotGroup(0, 0, 3));
+    root.addChild(new Spot(0, 0, 0));
+
+    updateLayout();
+    tick();
+  }
+  function updateLayout(){
+    var spacing = 20;
+    var currentHeight = 40;
+    for(var i = 0; i < root.children.length; i++){
+      root.children[i].y = currentHeight;
+      var width = root.children[i].width;
+      root.children[i].x = (CANVAS_WIDTH/2) - (width/2);
+      currentHeight += root.children[i].height + spacing;
+    }
+  }
+  var dragging;
+  function startDrag(entity, evt){
+    var pos = getMousePosition(evt);
+    var offset = {x: pos.x-entity.x-5, y: pos.y-entity.y-5};
+    var clone = entity.clone();
+    clone.x = (SELECTION_PADDING + 2);
+    clone.y = (SELECTION_PADDING + 2);
+    var elem = parent.document.body.appendChild(document.createElement("div"));
+    var dragcanvas = elem.appendChild(document.createElement("canvas"));
+    dragcanvas.width = entity.width + (SELECTION_PADDING + 2) * 2;
+    dragcanvas.height = entity.height + (SELECTION_PADDING + 2) * 2;
+    var context = enhanceContext(dragcanvas.getContext("2d"));
+    context.clearRect(0, 0, dragcanvas.width, dragcanvas.height);
+    clone.draw(context);
+    clone.drawBounds(context);
+    var updateDrag = function(x, y){
+      var style = `position: absolute; z-index:10000; left: ${x-dragging.offset.x}px; top: ${y-dragging.offset.y}px;`
+      dragging.elem.style = style;
+    }
+    dragging = {entity:clone, offset:offset, elem:elem, updateDrag:updateDrag};
+    updateDrag(evt.clientX, evt.clientY);
+    //entities.push(test);
+  }
+  function mouseDown(evt){
+    if(hover.length == 0) return;
+    startDrag(hover[0], evt);
+  }
+  var hover = [];
+  function mouseMove(evt){
+    if(dragging) return;
+    hover = [];
+    var pos = getMousePosition(evt);
+    for(var i = 0; i < root.children.length; i++){
+      if(root.children[i].hitTest(pos.x, pos.y)){
+        hover.push(root.children[i]);
+        break;
+      }
+    }
+  }
+  function docMouseMove(evt){
+    if(dragging){
+      dragging.updateDrag(evt.clientX, evt.clientY);
+      return;
+    }
+  }
+  function mouseUp(evt){
+    hover = [];
+    if(dragging){
+      var rect = parent.canvas.getBoundingClientRect();
+      if(evt.clientX >= rect.left && evt.clientX <= rect.right && evt.clientY >= rect.top && evt.clientY <= rect.bottom){
+        var entity = parent.root.addChild(new dragging.entity.constructor(...dragging.entity.constructorArgs));
+        parent.select(entity);
+        var position = parent.getScaledMousePosition(evt);
+        //4 seems to be a magic number. Could be tied to margins, but I don't know.
+        position.x += -dragging.offset.x + 4;
+        position.y += -dragging.offset.y + 4;
+        entity.x = position.x;
+        entity.y = position.y;
+      }
+      dragging.elem.remove();
+      dragging = null;
+    }
+  }
+  function getMousePosition(evt){
+    var rect = canvas.getBoundingClientRect();
+    var x = evt.clientX - rect.left;
+    var y = evt.clientY - rect.top;
+    return {x:x, y:y};
+  }
+  function tick(){
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    root.draw(ctx);
+    rootui.draw(ctx);
+    for(var i = 0; i < root.children.length; i++){
+      root.children[i].drawBounds(ctx, "#999999");
+    }
+    for(var i = 0; i < hover.length; i++){
+      hover[i].drawBounds(ctx);
+    }
+    window.requestAnimationFrame(tick);
+  }
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+</body>
+</html>
