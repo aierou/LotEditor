@@ -1,17 +1,21 @@
 var CANVAS_WIDTH = 1280;
 var CANVAS_HEIGHT = 720;
+var STAGE_WIDTH = 1920;
+var STAGE_HEIGHT = 1080;
 var SCALING_RATIO = 0.9;
 
 var canvas;
+var container;
 var ctx;
 var currentScale = 1;
 var root;
 var entities;
+var stagePosition;
+var minimumScale;
 
 window.onload = function(){
   canvas = document.getElementById("canvas");
-  canvas.width = CANVAS_WIDTH;
-  canvas.height = CANVAS_HEIGHT;
+  container = document.getElementById("canvas-container");
   ctx = enhanceContext(canvas.getContext("2d"));
   canvas.addEventListener("mousedown", mouseDown);
   canvas.addEventListener("mouseup", mouseUp);
@@ -24,15 +28,31 @@ window.onload = function(){
   root.addChild(new SpotGroup(500, 400, 3));
   root.children[1].rotation = 45;
 
-  //setScale(0.5); //For testing
+  setScale(0.5);
+  setMinimumScale(0.25);
 
   tick();
 }
 
 function setScale(scale){
+  if(scale < minimumScale) scale = minimumScale;
   currentScale = scale;
   ctx.resetTransform();
   ctx.scale(scale, scale);
+}
+function setMinimumScale(scale){
+  minimumScale = scale;
+  stagePosition = {};
+  stagePosition.x = (1/minimumScale*CANVAS_WIDTH/2)-(STAGE_WIDTH/2);
+  stagePosition.y = (1/minimumScale*CANVAS_HEIGHT/2)-(STAGE_HEIGHT/2);
+  setOffset(stagePosition.x, stagePosition.y);
+  var pos = transformPoint({x:CANVAS_WIDTH*(1/minimumScale) - stagePosition.x, y:CANVAS_HEIGHT*(1/minimumScale) - stagePosition.y}, ctx._matrix);
+  canvas.width = pos.x;
+  canvas.height = pos.y;
+  var maxScrollLeft = container.scrollWidth - container.clientWidth;
+  var maxScrollTop = container.scrollHeight - container.clientHeight;
+  container.scrollLeft = maxScrollLeft / 2;
+  container.scrollTop = maxScrollTop / 2;
 }
 
 function setOffset(x, y){
@@ -42,14 +62,23 @@ function setOffset(x, y){
 }
 
 function mouseScroll(evt){
+  if(!evt.ctrlKey) return;
+  evt.preventDefault();
   var pos1 = getTransformedMousePosition(evt);
   if(evt.deltaY > 0){
     setScale(currentScale * SCALING_RATIO);
   }else if(evt.deltaY < 0){
     setScale(currentScale * (1/SCALING_RATIO));
   }
+  setOffset(stagePosition.x, stagePosition.y);
   var pos2 = getTransformedMousePosition(evt);
-  setOffset(pos2.x - pos1.x, pos2.y - pos1.y);
+  var diff = {x: pos2.x - pos1.x, y: pos2.y - pos1.y};
+
+  var pos = transformPoint({x:CANVAS_WIDTH*(1/minimumScale) - stagePosition.x, y:CANVAS_HEIGHT*(1/minimumScale) - stagePosition.y}, ctx._matrix);
+  canvas.width = pos.x;
+  canvas.height = pos.y;
+  container.scrollLeft -= diff.x*currentScale;
+  container.scrollTop -= diff.y*currentScale;
 }
 
 var dragging = [];
@@ -269,12 +298,12 @@ function tick(){
   ctx.save();
   ctx.fillStyle = "#aaaaaa";
   var start = getTransformedPoint({x:0, y:0});
-  var end = getTransformedPoint({x:CANVAS_WIDTH, y:CANVAS_HEIGHT});
+  var end = getTransformedPoint({x:canvas.width, y:canvas.height});
   ctx.fillRect(start.x, start.y, end.x-start.x, end.y-start.y);
   ctx.restore();
 
   //Clear buffer
-  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  ctx.clearRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
 
   //Start drawing from root entity
   if(root) root.draw(ctx);

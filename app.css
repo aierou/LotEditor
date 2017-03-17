@@ -3,9 +3,15 @@ iframe{
 	border-width:1px;
 }
 #canvas{
+}
+#canvas-container{
   border: 1px solid;
-  margin-left: -5px;
-  margin-right: -5px;
+  width: 1280px;
+  height: 720px;
+  overflow:scroll;
+}
+body * {
+  display: inline-block;
 }
 body{
   user-select: none;
