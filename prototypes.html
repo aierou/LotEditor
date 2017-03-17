@@ -22,18 +22,8 @@
     canvas.addEventListener("mousemove", mouseMove);
     document.addEventListener("mousemove", docMouseMove)
 
-    getId = function(){
-      return "n";
-    }
-
     root = new Entity(0, 0);
     rootui = new Entity(0, 0);
-    entities = new EntityManager();
-    entities.getId = function(){
-      return "n";
-    }
-    entities.push(root);
-    entities.push(rootui);
     rootui.addChild(new Label(10, 10, "Object Prototypes", 200, "20px sans-serif"));
     root.addChild(new SpotGroup(0, 0, 3));
     root.addChild(new Spot(0, 0, 0));
@@ -98,14 +88,20 @@
   function mouseUp(evt){
     hover = [];
     if(dragging){
-      var rect = parent.canvas.getBoundingClientRect();
-      if(evt.clientX >= rect.left && evt.clientX <= rect.right && evt.clientY >= rect.top && evt.clientY <= rect.bottom){
+      //Calculate the canvas container coordinates. This may need to be changed
+      //if elements are rearranged.
+      var rect1 = document.body.getBoundingClientRect();
+      var rect2 = parent.canvas.getBoundingClientRect();
+      var x = evt.clientX + rect1.left - rect2.left;
+      var y = evt.clientY + rect1.top - rect2.top;
+      if(x >= 0 && x <= parent.CANVAS_WIDTH && y >= 0 && y <= parent.CANVAS_HEIGHT){
         var entity = parent.root.addChild(new parent.classes[dragging.entity.type](...dragging.entity.constructorArgs));
         parent.select(entity);
-        var position = parent.getTransformedMousePosition(evt);
-        //8 seems to be a magic number. Could be tied to margins, but I don't know.
-        position.x += -(dragging.offset.x) + (8*1/parent.currentScale);
-        position.y += -(dragging.offset.y) + (8*1/parent.currentScale);
+        var position = parent.getTransformedPoint({x:x, y:y});
+        //Dragging offset is calculated in entity coordinates, so apply it after
+        //getting transformed point
+        position.x += -(dragging.offset.x);
+        position.y += -(dragging.offset.y);
         entity.x = position.x;
         entity.y = position.y;
       }

@@ -4,26 +4,6 @@ var SPOT_SCALE = 10;
 var SELECTION_PADDING = 3;
 
 var classes = {};
-classes["EntityManager"] = class extends Array{
-  constructor(){
-    super(...arguments);
-    this.id = 0;
-  }
-  //There may be a better solution for this scoping issue that I'm running into,
-  //but as of now, Entity Manager may need to store some globals.
-  getId(){
-    return this.id++;
-  }
-  push(entity){
-    entity.manager = this;
-    super.push(entity);
-    entity.onAdd();
-  }
-  remove(entity){
-    this.splice(this.findIndex(a => a == entity), 1);
-  }
-}
-
 classes["Entity"] = class{
   constructor(x, y, type, rotation){
     this.children = [];
@@ -54,20 +34,18 @@ classes["Entity"] = class{
   addChild(child){
     child.parent = this;
     this.children.push(child);
-    child.setManager(this.manager);
+    child.onAdd();
     return child;
   }
-  setManager(manager){
-    if(manager == null) return;
-    manager.push(this); //Implicitly sets this.manager
+  getDescendants(){
+    var ret = [];
     for(var i = 0; i < this.children.length; i++){
-      this.children[i].setManager(manager);
+      ret.push(this.children[i]);
+      ret = ret.concat(this.children[i].getDescendants());
     }
+    return ret;
   }
   removeAllChildren(){
-    for(var i = 0; i < this.children.length; i++){
-      this.manager.remove(this.children[i]);
-    }
     this.children = [];
   }
   draw(ctx){
@@ -129,7 +107,6 @@ classes["Spot"] = class extends classes["Entity"]{
     this.constructorArgs = Array.from(arguments);
     this.width = SPOT_WIDTH * SPOT_SCALE;
     this.height = SPOT_HEIGHT * SPOT_SCALE;
-    this.id = 0;
     this.anchor.x = this.width/2;
     this.anchor.y = this.height/2;
   }
@@ -143,10 +120,15 @@ classes["Spot"] = class extends classes["Entity"]{
   }
   drawAnnotations(ctx){
     var p = this.getAnchorCanvasPosition();
-    ctx.fillText(this.id, p.x, p.y);
+    ctx.fillText(this.spotid, p.x, p.y);
   }
   onAdd(){
-    this.id = this.manager.getId(); //Kind of hacky
+    //Kind of hacky
+    if(typeof(getId) != "undefined"){
+      if(!this.spotid) this.spotid = getId();
+    }else{
+      this.spotid = "";
+    }
   }
 }
 

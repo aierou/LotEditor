@@ -4,11 +4,11 @@
   <script src="inspector.js"></script>
 	<script>
     window.onload = function(){
-      document.getElementById("subtitle").innerHTML = "ID: " + parent.inspecting.id;
+      document.getElementById("subtitle").innerHTML = "ID: " + parent.inspecting.spotid;
 
       var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
       i.addAccessor(new ValueSetter("id", function(val){
-        parent.inspecting.id = val;
+        parent.inspecting.spotid = val;
       }, "ID"));
       i.addAccessor(new ValueSetter("rotation", function(val){
         val = parseInt(val, 10);

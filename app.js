@@ -1,10 +1,11 @@
 var CANVAS_WIDTH = 1280;
 var CANVAS_HEIGHT = 720;
+var SCALING_RATIO = 0.9;
 
 var canvas;
 var ctx;
-var root;
 var currentScale = 1;
+var root;
 var entities;
 
 window.onload = function(){
@@ -17,9 +18,7 @@ window.onload = function(){
   canvas.addEventListener("mousemove", mouseMove);
   canvas.addEventListener("wheel", mouseScroll);
 
-  entities = new EntityManager();
   root = new Entity(0, 0);
-  entities.push(root); //We only need to add to our manager for root objects
   root.selectable = false;
   root.addChild(new Spot(500, 200, 135));
   root.addChild(new SpotGroup(500, 400, 3));
@@ -45,9 +44,9 @@ function setOffset(x, y){
 function mouseScroll(evt){
   var pos1 = getTransformedMousePosition(evt);
   if(evt.deltaY > 0){
-    setScale(currentScale * .9);
+    setScale(currentScale * SCALING_RATIO);
   }else if(evt.deltaY < 0){
-    setScale(currentScale * (1/.9));
+    setScale(currentScale * (1/SCALING_RATIO));
   }
   var pos2 = getTransformedMousePosition(evt);
   setOffset(pos2.x - pos1.x, pos2.y - pos1.y);
@@ -105,7 +104,7 @@ function mouseMove(evt){
     startDrag(scaledDragPosition.x, scaledDragPosition.y);
     dragposition = null;
   }
-  //We want to set this even when we aren't dragging something
+  //We want to set dragged even when we aren't dragging something
   //This is so select isn't called on mouse release if we dragged
   if(mouseIsDown) dragged = true;
   if(dragging.length > 0){
@@ -131,6 +130,7 @@ function getTransformedPoint(p){
 function selectAtPosition(x, y, descend){
   if(descend == null) descend = true;
   var hit = false;
+  var entities = root.getDescendants();
   for(var i = 0; i < entities.length; i ++){
     if(entities[i].hitTest(x, y)){
       hit = true;
@@ -144,6 +144,7 @@ function selectAtPosition(x, y, descend){
 }
 function selectAll(){
   selection = [];
+  var entities = root.getDescendants();
   for(var i = 0; i < entities.length; i ++){
     selection.push(entities[i]);
   }
@@ -210,18 +211,55 @@ function updateInspector(){
   }
 }
 
-function serialize(){
-  return JSON.stringify(entities);
+function serialize(rootEntity){
+  var serializer = function(entity){
+    var ret = Object.assign({}, entity);
+    ret.parent = null;
+    ret.manager = null;
+    if(ret.children.length != 0){
+      var oldChildren = Object.assign([], ret.children);
+      ret.children = [];
+      for(var i = 0; i < oldChildren.length; i++){
+        ret.children.push(serializer(oldChildren[i]));
+      }
+    }
+    return ret;
+  }
+  return JSON.stringify(serializer(rootEntity));
+}
+function deserialize(data){
+  var rootEntity = JSON.parse(data);
+  var deserializer = function(entity){
+    //Create entity with saved values.
+    var ret = Object.assign(new classes[entity.type](), entity);
+
+    //Add children
+    if(ret.children.length != 0){
+      var oldChildren = Object.assign([], ret.children);
+      ret.children = [];
+      for(var i = 0; i < oldChildren.length; i++){
+        ret.addChild(deserializer(oldChildren[i]));
+      }
+    }
+    return ret;
+  }
+  return deserializer(rootEntity);
 }
 function serializeSpots(){
   var spots = [];
+  var entities = root.getDescendants();
   for(var i = 0; i < entities.length; i++){
     if(entities[i].type == "Spot"){
       var pos = getTransformedPoint(entities[i].getAnchorCanvasPosition());
-      spots.push({x:pos.x, y:pos.y, id:entities[i].id});
+      spots.push({x:pos.x, y:pos.y, id:entities[i].spotid});
     }
   }
   return JSON.stringify(spots);
+}
+
+var currentId = 0;
+function getId(){
+  return currentId++;
 }
 
 var frame = 0;
@@ -239,7 +277,7 @@ function tick(){
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   //Start drawing from root entity
-  root.draw(ctx);
+  if(root) root.draw(ctx);
 
   //Draw selection bounds
   for(var i = 0; i < selection.length; i++){
