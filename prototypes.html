@@ -92,9 +92,12 @@
       //if elements are rearranged.
       var rect1 = document.body.getBoundingClientRect();
       var rect2 = parent.canvas.getBoundingClientRect();
-      var x = evt.clientX + rect1.left - rect2.left;
-      var y = evt.clientY + rect1.top - rect2.top;
-      if(x >= 0 && x <= parent.canvas.width && y >= 0 && y <= parent.canvas.height){
+      var rect3 = parent.container.getBoundingClientRect();
+      var x = evt.clientX + rect1.left;
+      var y = evt.clientY + rect1.top;
+      if(x >= rect3.left && x <= rect3.right && y >= rect3.top && y <= rect3.bottom){
+        x -= rect2.left;
+        y -= rect2.top;
         var entity = parent.root.addChild(new parent.classes[dragging.entity.type](...dragging.entity.constructorArgs));
         parent.select(entity);
         var position = parent.getTransformedPoint({x:x, y:y});
