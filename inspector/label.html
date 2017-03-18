@@ -4,17 +4,20 @@
   <script src="inspector.js"></script>
 	<script>
     window.onload = function(){
-      document.getElementById("subtitle").innerHTML = "ID: " + parent.inspecting.spotid;
-
       var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
-      i.addAccessor(new ValueSetter("id", function(val){
-        parent.inspecting.spotid = val;
-      }, "ID"));
+      i.addAccessor(new ValueSetter("text", function(val){
+        parent.inspecting.setText(val);
+      }, "Text"));
       i.addAccessor(new ValueSetter("rotation", function(val){
         val = parseInt(val, 10);
         if(isNaN(val)) return;
         parent.inspecting.rotation = val;
       }, "Rotation"));
+      i.addAccessor(new ValueSetter("size", function(val){
+        val = parseInt(val, 10);
+        if(isNaN(val) || val <= 0) return;
+        parent.inspecting.setSize(val);
+      }, "Size"));
       i.addAccessor(new Button("delete", function(){
         parent.inspecting.parent.removeChild(parent.inspecting);
         parent.deselectAll();

@@ -15,7 +15,10 @@
         if(isNaN(val)) return;
         parent.inspecting.rotation = val;
       }, "Rotation"));
-
+      i.addAccessor(new Button("delete", function(){
+        parent.inspecting.parent.removeChild(parent.inspecting);
+        parent.deselectAll();
+      }, "Delete Object"));
       i.build();
 
 		}

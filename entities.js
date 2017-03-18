@@ -1,7 +1,7 @@
 var SPOT_WIDTH = 4;
 var SPOT_HEIGHT = 8;
 var SPOT_SCALE = 10;
-var SELECTION_PADDING = 3;
+var SELECTION_PADDING = 5;
 
 var classes = {};
 classes["Entity"] = class{
@@ -17,6 +17,18 @@ classes["Entity"] = class{
   getAnchorCanvasPosition(){ //Can return null
     return this._anchor;
   }
+  getCornerPoints(){
+    var points = [
+      {x: 0, y: 0},
+      {x: 0, y: this.height},
+      {x: this.width, y: this.height},
+      {x: this.width, y: 0},
+    ];
+    for(var i = 0; i < points.length; i++){
+      points[i] = transformPoint(points[i], this._matrix);
+    }
+    return points;
+  }
   clone(toParent){
     var clone = new this.constructor();
     Object.assign(clone, this);
@@ -31,11 +43,14 @@ classes["Entity"] = class{
     }
     return clone;
   }
-  addChild(child){
-    child.parent = this;
-    this.children.push(child);
-    child.onAdd();
-    return child;
+  addChild(entity){
+    entity.parent = this;
+    this.children.push(entity);
+    entity.onAdd();
+    return entity;
+  }
+  removeChild(entity){
+    this.children.splice(this.children.findIndex(a => a == entity), 1);
   }
   getDescendants(){
     var ret = [];
@@ -142,10 +157,9 @@ classes["SpotGroup"] = class extends classes["Entity"]{
     this.length = length;
 
     this.anchor.y = this.spotHeight;
-
-    this.setLength(length);
   }
   setLength(length){
+    this.length = length;
     this.removeAllChildren();
     for(var i = 0; i < length; i++){
       this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, 0, 180));
@@ -156,20 +170,41 @@ classes["SpotGroup"] = class extends classes["Entity"]{
     this.width = length * this.spotWidth;
     this.height = 2 * this.spotHeight;
   }
+  onAdd(){
+    this.setLength(this.length);
+  }
 }
 classes["Label"] = class extends classes["Entity"]{
-  constructor(x, y, text, width, font){
+  constructor(x, y, text, size){
     super(x, y, "Label");
     this.constructorArgs = Array.from(arguments);
-    this.text = text;
-    this.width = width;
-    this.height = 20;
-    this.font = font;
+    this._text = text;
+    this.setSize(size);
+  }
+  setText(val){
+    this._text = val;
+    this.setSize(this.size);
+  }
+  setSize(size){
+    this.size = size;
+    this.font = size + "px sans-serif";
+    var c = document.createElement("canvas");
+    var ct = c.getContext("2d");
+    ct.font = this.font;
+    var dim1 = ct.measureText(this._text);
+    //So measureText does not give us text height. What.
+    //Hack solution is using capital M width as an approximation of height.
+    var dim2 = ct.measureText("M");
+
+    this.width = dim1.width;
+    this.height = dim2.width;
+
+    this.anchor = {x:this.width/2, y:this.height/2};
   }
   drawPrimitive(){
     ctx.save();
     ctx.font = this.font;
-    ctx.fillText(this.text, 10, 10, this.width);
+    ctx.fillText(this._text, 0, this.height);
     ctx.restore();
   }
 }
@@ -198,6 +233,26 @@ for(var className in classes){
 function transformPoint(point, matrix){
   return { x: (point.x * matrix.a) + (point.y * matrix.c) + matrix.e,
        y: (point.x * matrix.b) + (point.y * matrix.d) + matrix.f };
+}
+
+class Rectangle{
+  constructor(left, top, right, bottom){
+    this.left = left;
+    this.top = top;
+    this.right = right;
+    this.bottom = bottom;
+  }
+  containsPoint(p){
+    return (p.x >= this.left && p.x <= this.right && p.y >= this.top && p.y <= this.bottom);
+  }
+}
+
+function pointsToRectangle(pos1, pos2){
+  var left = pos1.x < pos2.x ? pos1.x : pos2.x;
+  var top = pos1.y < pos2.y ? pos1.y : pos2.y;
+  var right = pos1.x > pos2.x ? pos1.x : pos2.x;
+  var bottom = pos1.y > pos2.y ? pos1.y : pos2.y;
+  return new Rectangle(left, top, right, bottom);
 }
 
 function cloneMatrix(m){

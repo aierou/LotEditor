@@ -24,16 +24,18 @@
 
     root = new Entity(0, 0);
     rootui = new Entity(0, 0);
-    rootui.addChild(new Label(10, 10, "Object Prototypes", 200, "20px sans-serif"));
+    rootui.addChild(new Label(20, 10, "Object Prototypes", 20));
+    rootui.addChild(new Label(65, 30, "(click + drag)", 12));
     root.addChild(new SpotGroup(0, 0, 3));
     root.addChild(new Spot(0, 0, 0));
+    root.addChild(new Label(0, 0, "Label", 18));
 
     updateLayout();
     tick();
   }
   function updateLayout(){
     var spacing = 20;
-    var currentHeight = 40;
+    var currentHeight = 60;
     for(var i = 0; i < root.children.length; i++){
       root.children[i].y = currentHeight;
       var width = root.children[i].width;
@@ -57,7 +59,8 @@
     clone.draw(context);
     clone.drawBounds(context);
     var updateDrag = function(x, y){
-      var style = `position: absolute; z-index:10000; left: ${x-(dragging.offset.x-4)}px; top: ${y-(dragging.offset.y-4)}px;`
+      //1 is magic number, probably related to margins
+      var style = `position: absolute; z-index:10000; left: ${x-(dragging.offset.x-1)}px; top: ${y-(dragging.offset.y-1)}px;`
       dragging.elem.style = style;
     }
     dragging = {entity:clone, offset:offset, elem:elem, updateDrag:updateDrag};

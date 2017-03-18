@@ -18,6 +18,10 @@ body{
 #inspector input[type=text]{
   max-width: 120px;
 }
+#inspector > table{
+  width: 100%;
+  height: 100%;
+}
 
 .center{
   position: relative;

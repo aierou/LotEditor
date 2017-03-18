@@ -67,8 +67,8 @@ function updateCanvasSize(){
 }
 
 function mouseScroll(evt){
-  if(!evt.ctrlKey) return;
   evt.preventDefault();
+  if(!evt.ctrlKey || mouseIsDown) return;
   var pos1 = getTransformedMousePosition(evt);
   if(evt.deltaY > 0){
     setScale(currentScale * SCALING_RATIO);
@@ -86,6 +86,7 @@ function mouseScroll(evt){
 var dragging = [];
 var dragged = false;
 var dragposition = null;
+var mouseDownPosition = null;
 var mouseIsDown = false;
 function startDrag(x, y){
   dragging = [];
@@ -102,18 +103,35 @@ function mouseDown(evt){
   mouseIsDown = true;
   var pos = getMousePosition(evt);
   dragposition = {x:pos.x, y:pos.y};
+  mouseDownPosition = {x:pos.x, y:pos.y};
 }
 function mouseUp(evt){
+  if(dragged && dragging.length == 0){ //rectangle select
+    selection = [];
+    var rect = pointsToRectangle(getTransformedPoint(mouseDownPosition), getTransformedMousePosition(evt));
+    var entities = root.children;
+    for(var i = 0; i < entities.length; i++){
+      var inside = true;
+      var points = entities[i].getCornerPoints();
+      for(var j = 0; j < points.length; j++){
+        //Transform point here for stage coordinates.
+        if(!rect.containsPoint(getTransformedPoint(points[j]))){
+          inside = false;
+          break;
+        }
+      }
+      if(inside)selection.push(entities[i]);
+    }
+    //If we only selected one entity, we can safely update the inspector.
+    if(selection.length == 1) updateInspector();
+  }else if(!dragged){ //point select
+    var pos = getMousePosition(evt);
+    selectAtPosition(pos.x, pos.y);
+  }
+  dragged = false;
   dragging = [];
   dragposition = null;
   mouseIsDown = false;
-  if(dragged){
-    dragged = false;
-    return;
-  } //If we dragged, we don't want to select on release
-  var pos = getMousePosition(evt);
-
-  selectAtPosition(pos.x, pos.y);
 }
 var currentMouse;
 function mouseMove(evt){
@@ -158,6 +176,23 @@ function getTransformedMousePosition(evt){
 function getTransformedPoint(p){
   return transformPoint(p, ctx._matrix.inverse());
 }
+
+function drawSelector(){
+  if(mouseIsDown && dragging.length == 0){
+    var start = getTransformedPoint(mouseDownPosition);
+    ctx.save();
+    ctx.setLineDash([10, 10]);
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(start.x, currentMouse.y);
+    ctx.lineTo(currentMouse.x, currentMouse.y);
+    ctx.lineTo(currentMouse.x, start.y);
+    ctx.lineTo(start.x, start.y);
+    ctx.stroke();
+    ctx.setLineDash([0]);
+    ctx.restore();
+  }
+}
+
 function selectAtPosition(x, y, descend){
   if(descend == null) descend = true;
   var hit = false;
@@ -219,10 +254,18 @@ function deselect(entity){
   updateInspector();
 }
 
+function deselectAll(){
+  selection = [];
+  updateInspector();
+}
+
 var inspecting;
+var inspector_current;
 function updateInspector(){
   inspecting = null;
   if(selection.length > 0) inspecting = selection[selection.length - 1];
+  var inspector = document.getElementById("inspector");
+  var src = "inspector/default.html";
   if(inspecting){
     var src;
     switch(inspecting.type){
@@ -232,13 +275,16 @@ function updateInspector(){
       case "SpotGroup":
         src = "inspector/spotgroup.html";
       break;
+      case "Label":
+        src = "inspector/label.html";
+      break;
       default:
         src = "inspector/default.html";
       break;
     }
-    document.getElementById("inspector").src = src;
-  }else{
-    document.getElementById("inspector").src = "inspector/default.html";
+  }
+  if(src != inspector_current){
+    inspector.src = inspector_current = src;
   }
 }
 
@@ -287,18 +333,86 @@ function serializeSpots(){
   return JSON.stringify(spots);
 }
 
+function countSpots(){
+  var spots = 0;
+  var entities = root.getDescendants();
+  for(var i = 0; i < entities.length; i++){
+    if(entities[i].type == "Spot"){
+      spots++;
+    }
+  }
+  return spots;
+}
+
 function getImage(){
   var output = document.createElement("canvas");
   var context = enhanceContext(output.getContext("2d"));
   output.width = STAGE_WIDTH;
   output.height = STAGE_HEIGHT;
   root.draw(context);
-  return output.toDataURL();
+  return output.toDataURL().split("data:image/png;base64,").join("");
 }
 
-var currentId = 0;
+var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEsImlhdCI6MTQ4OTc5Mjk3OCwiZXhwIjoxNDkyMzg0OTc4fQ.J_3KlxsJRTsojG94wj4G3ZiKJg6fU5eJCqdl9M-BJJI";
+function save(){
+  var data = {
+    name: "Test",
+    lat: "43.0",
+    lng: "82.0",
+    spots: countSpots(),
+    image_data: getImage(),
+    lot_data: serialize(root),
+    spot_data: serializeSpots(),
+    token: token
+  }
+  sendJSON("POST", "https://192.168.0.4/api/lot", data, function(response){
+    console.log(response);
+  });
+}
+
+function load(){
+  var data = {
+    token:token
+  }
+  sendJSON("POST", "https://192.168.0.4/api/account/lots", data, function(response){
+    if(response.result){
+      root = deserialize(response.result[0].lot_data);
+    }
+  });
+}
+
+function sendJSON(method, url, data, callback, error){
+  var request = new XMLHttpRequest();   // new HttpRequest instance
+  request.open(method, url);
+  request.setRequestHeader("Content-Type", "application/json");
+  request.send(JSON.stringify(data));
+  request.onload = function(){
+    if(this.status >= 200 && this.status < 300){
+      callback(JSON.parse(this.response));
+    }else{
+      if(error) error(this.response);
+    }
+  }
+  request.onerror = function(){
+    //Network error
+  }
+}
+
+//Fairly brute-force approach, but should make id management nicer.
 function getId(){
-  return currentId++;
+  var taken = [];
+  var entities = root.getDescendants();
+  for(var i = 0; i < entities.length; i++){
+    if(entities[i].type == "Spot"){
+      var id = parseInt(entities[i].spotid, 10);
+      if(!isNaN(id) && id >= 0) taken.push(id);
+    }
+  }
+  taken.sort((a, b) => a - b);
+  for(var i = 0; i < taken.length; i++){
+    if(taken[i] != i) {console.log(i); return i;}
+  }
+  return taken.length;
 }
 
 var frame = 0;
@@ -325,6 +439,9 @@ function tick(){
   for(var i = 0; i < selection.length; i++){
     selection[i].drawBounds(ctx);
   }
+
+  //Draw rectangle select
+  drawSelector();
 
   window.requestAnimationFrame(tick);
 }
