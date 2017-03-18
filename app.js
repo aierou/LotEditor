@@ -22,6 +22,7 @@ window.onload = function(){
   canvas.addEventListener("mouseup", mouseUp);
   canvas.addEventListener("mousemove", mouseMove);
   canvas.addEventListener("wheel", mouseScroll);
+  container.addEventListener("mousemove", containerMouseMove);
 
   root = new Entity(0, 0);
   root.selectable = false;
@@ -66,8 +67,20 @@ function updateCanvasSize(){
   canvas.height = pos.y;
 }
 
+
+//Right; So; there was a noticeable loss of accuracy when performing a zoom.
+//This loss in accuracy was largely due to the imprecision of scroll bar position,
+//and so I am now performing calculations on a scroll bar position object separate
+//to the live one.
+var containerCurrentMouse;
+var highPrecisionScrollPosition;
+function containerMouseMove(evt){
+  if(containerCurrentMouse && containerCurrentMouse.x == evt.clientX && containerCurrentMouse.y == evt.clientY) return;
+  containerCurrentMouse = {x: evt.clientX, y: evt.clientY};
+  highPrecisionScrollPosition = {left:container.scrollLeft, top:container.scrollTop};
+}
 function mouseScroll(evt){
-  evt.preventDefault();
+  if(evt.ctrlKey) evt.preventDefault();
   if(!evt.ctrlKey || mouseIsDown) return;
   var pos1 = getTransformedMousePosition(evt);
   if(evt.deltaY > 0){
@@ -79,8 +92,10 @@ function mouseScroll(evt){
   var pos2 = getTransformedMousePosition(evt);
   var diff = {x: pos2.x - pos1.x, y: pos2.y - pos1.y};
   updateCanvasSize();
-  container.scrollLeft -= diff.x*currentScale;
-  container.scrollTop -= diff.y*currentScale;
+  highPrecisionScrollPosition.left -= diff.x*currentScale;
+  highPrecisionScrollPosition.top -= diff.y*currentScale;
+  container.scrollLeft = highPrecisionScrollPosition.left;
+  container.scrollTop = highPrecisionScrollPosition.top;
 }
 
 var dragging = [];
@@ -88,6 +103,8 @@ var dragged = false;
 var dragposition = null;
 var mouseDownPosition = null;
 var mouseIsDown = false;
+var initialScrollPosition;
+var containerMouseDownPosition;
 function startDrag(x, y){
   dragging = [];
   dragged = false;
@@ -100,12 +117,22 @@ function startDrag(x, y){
   }
 }
 function mouseDown(evt){
-  mouseIsDown = true;
-  var pos = getMousePosition(evt);
-  dragposition = {x:pos.x, y:pos.y};
-  mouseDownPosition = {x:pos.x, y:pos.y};
+  if(evt.buttons == 4){ //Middle click
+    evt.preventDefault();
+    initialScrollPosition = {top:container.scrollTop, left:container.scrollLeft};
+    containerMouseDownPosition = getElementMousePosition(container, evt);
+  }else{
+    var pos = getMousePosition(evt);
+    mouseIsDown = true;
+    dragposition = {x:pos.x, y:pos.y};
+    mouseDownPosition = {x:pos.x, y:pos.y};
+  }
 }
 function mouseUp(evt){
+  if(initialScrollPosition != null){ //Release middle click
+    initialScrollPosition = null;
+    return;
+  }
   if(dragged && dragging.length == 0){ //rectangle select
     selection = [];
     var rect = pointsToRectangle(getTransformedPoint(mouseDownPosition), getTransformedMousePosition(evt));
@@ -142,6 +169,16 @@ function mouseMove(evt){
     return;
   }
   currentMouse = pos;
+
+  //Holding middle click
+  if(evt.buttons == 4){
+    var start = containerMouseDownPosition;
+    var end = getElementMousePosition(container, evt);
+    var now = {x:end.x - start.x, y:end.y - start.y};
+    container.scrollLeft = initialScrollPosition.left - now.x;
+    container.scrollTop = initialScrollPosition.top - now.y;
+  }
+
   //We want to try a drag if the mouse was moved while the mouse button is being held.
   //This is done to make dragging feel better.
   if(dragposition != null){
@@ -165,6 +202,12 @@ function mouseMove(evt){
 }
 function getMousePosition(evt){
   var rect = canvas.getBoundingClientRect();
+  var x = evt.clientX - rect.left;
+  var y = evt.clientY - rect.top;
+  return {x:x, y:y};
+}
+function getElementMousePosition(elem, evt){
+  var rect = elem.getBoundingClientRect();
   var x = evt.clientX - rect.left;
   var y = evt.clientY - rect.top;
   return {x:x, y:y};
