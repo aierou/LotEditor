@@ -181,14 +181,14 @@ function drawSelector(){
   if(mouseIsDown && dragging.length == 0){
     var start = getTransformedPoint(mouseDownPosition);
     ctx.save();
-    ctx.setLineDash([10, 10]);
+    ctx.setLineDash([10, 10]); //For some reason this is leaking out of the saved context.
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(start.x, currentMouse.y);
     ctx.lineTo(currentMouse.x, currentMouse.y);
     ctx.lineTo(currentMouse.x, start.y);
     ctx.lineTo(start.x, start.y);
     ctx.stroke();
-    ctx.setLineDash([0]);
+    ctx.setLineDash([0]); //This doesn't help.
     ctx.restore();
   }
 }
@@ -410,7 +410,7 @@ function getId(){
   }
   taken.sort((a, b) => a - b);
   for(var i = 0; i < taken.length; i++){
-    if(taken[i] != i) {console.log(i); return i;}
+    if(taken[i] != i) return i;
   }
   return taken.length;
 }

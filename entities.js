@@ -124,6 +124,12 @@ classes["Spot"] = class extends classes["Entity"]{
     this.height = SPOT_HEIGHT * SPOT_SCALE;
     this.anchor.x = this.width/2;
     this.anchor.y = this.height/2;
+
+    if(typeof(getId) != "undefined"){
+      if(!this.spotid) this.spotid = getId();
+    }else{
+      this.spotid = "";
+    }
   }
   drawPrimitive(ctx){
     ctx.beginPath();
@@ -136,14 +142,6 @@ classes["Spot"] = class extends classes["Entity"]{
   drawAnnotations(ctx){
     var p = this.getAnchorCanvasPosition();
     ctx.fillText(this.spotid, p.x, p.y);
-  }
-  onAdd(){
-    //Kind of hacky
-    if(typeof(getId) != "undefined"){
-      if(!this.spotid) this.spotid = getId();
-    }else{
-      this.spotid = "";
-    }
   }
 }
 
@@ -171,7 +169,10 @@ classes["SpotGroup"] = class extends classes["Entity"]{
     this.height = 2 * this.spotHeight;
   }
   onAdd(){
-    this.setLength(this.length);
+    // We call this here because if the group was just created, it needs
+    // to be attached to root to generate spots that have proper ids.
+    // This managed spot id thing is starting to become a pain to deal with.
+    if(this.children.length == 0) this.setLength(this.length);
   }
 }
 classes["Label"] = class extends classes["Entity"]{
@@ -198,6 +199,10 @@ classes["Label"] = class extends classes["Entity"]{
 
     this.width = dim1.width;
     this.height = dim2.width;
+
+    //Make sure resizing is relative to anchor position
+    this.x += this.anchor.x - (this.width/2);
+    this.y += this.anchor.y - (this.height/2);
 
     this.anchor = {x:this.width/2, y:this.height/2};
   }

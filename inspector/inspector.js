@@ -61,6 +61,7 @@ class AdvancedViewer{
     return ret;
   }
   register(){
+    //NOTE: Setting global boolean here
     var self = this;
     var handler = function(){
       var cb = document.getElementById(self.id + "_checkbox");
