@@ -6,15 +6,28 @@ iframe{
 }
 #canvas-container{
   border: 1px solid;
-  max-width: 1280px;
-  max-height: 720px;
   overflow:scroll;
 }
-#app{
-  width: 1800px;
+#objectpicker{
+  width:200px;
 }
-body * {
-  display: inline-block;
+#inspector{
+  width:300px;
+}
+#app{
+  display: flex;
+  flex-direction: column;
+}
+.row{
+  display: flex;
+  height: 70vh; /*Apparently the only way to force scrollable content in a flexbox is to manually set the content's size.*/
+}
+#properties{
+  display: block;
+  height: 30vh;
+}
+*{
+  margin: 0;
 }
 body{
   user-select: none;

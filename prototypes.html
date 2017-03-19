@@ -50,6 +50,7 @@
     var pos = getMousePosition(evt);
     var offset = {x: pos.x-entity.x, y: pos.y-entity.y};
     var clone = entity.clone();
+    //Magic number 2 is the pixel width of a selection line.
     clone.x = (SELECTION_PADDING + 2);
     clone.y = (SELECTION_PADDING + 2);
     var elem = parent.document.body.appendChild(document.createElement("div"));
@@ -61,8 +62,11 @@
     clone.draw(context);
     clone.drawBounds(context);
     var updateDrag = function(x, y){
-      //1 is magic number, probably related to margins
-      var style = `position: absolute; z-index:10000; left: ${x-(dragging.offset.x-1)}px; top: ${y-(dragging.offset.y-1)}px;`
+      var rect = parent.getAbsoluteRect(thiselem);
+      console.log(rect);
+      var left = x-(dragging.offset.x - rect.left + (SELECTION_PADDING + 2));
+      var top = y-(dragging.offset.y - rect.top + (SELECTION_PADDING + 2));
+      var style = `position: absolute; z-index:10000; left: ${left}px; top: ${top}px;`
       dragging.elem.style = style;
     }
     dragging = {entity:clone, offset:offset, elem:elem, updateDrag:updateDrag};
@@ -103,7 +107,6 @@
       if(x >= rect3.left && x <= rect3.right && y >= rect3.top && y <= rect3.bottom){
         x -= rect2.left;
         y -= rect2.top;
-        console.log(x + " " + y);
         var entity = parent.root.addChild(new parent.classes[dragging.entity.type](...dragging.entity.constructorArgs));
         parent.select(entity);
         var position = parent.getTransformedPoint({x:x, y:y});

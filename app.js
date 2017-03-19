@@ -472,6 +472,13 @@ function getId(){
 
 var frame = 0;
 function tick(){
+  //TODO: rename these variables
+  //Handle window resize
+  if(CANVAS_WIDTH != container.offsetWidth || CANVAS_HEIGHT != container.offsetHeight){
+    CANVAS_WIDTH = container.offsetWidth;
+    CANVAS_HEIGHT = container.offsetHeight;
+    setMinimumScale(minimumScale);
+  }
 
   //Background
   ctx.save();
