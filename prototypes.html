@@ -11,6 +11,7 @@
   var ctx;
   var root;
   var entities;
+  var thiselem;
 
   window.onload = function(){
     canvas = document.getElementById("canvas");
@@ -21,6 +22,7 @@
     document.addEventListener("mouseup", mouseUp);
     canvas.addEventListener("mousemove", mouseMove);
     document.addEventListener("mousemove", docMouseMove)
+    thiselem = parent.document.getElementById("objectpicker");
 
     root = new Entity(0, 0);
     rootui = new Entity(0, 0);
@@ -91,16 +93,17 @@
   function mouseUp(evt){
     hover = [];
     if(dragging){
-      //Calculate the canvas container coordinates. This may need to be changed
-      //if elements are rearranged.
-      var rect1 = document.body.getBoundingClientRect();
-      var rect2 = parent.canvas.getBoundingClientRect();
-      var rect3 = parent.container.getBoundingClientRect();
+      //Calculate the canvas container coordinates.
+      //This method *should* resist most element positioning and scrolling nonsense.
+      var rect1 = getAbsoluteRect(thiselem);
+      var rect2 = getAbsoluteRect(parent.canvas);
+      var rect3 = getAbsoluteRect(parent.container);
       var x = evt.clientX + rect1.left;
       var y = evt.clientY + rect1.top;
       if(x >= rect3.left && x <= rect3.right && y >= rect3.top && y <= rect3.bottom){
         x -= rect2.left;
         y -= rect2.top;
+        console.log(x + " " + y);
         var entity = parent.root.addChild(new parent.classes[dragging.entity.type](...dragging.entity.constructorArgs));
         parent.select(entity);
         var position = parent.getTransformedPoint({x:x, y:y});

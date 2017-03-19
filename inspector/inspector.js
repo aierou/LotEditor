@@ -42,6 +42,26 @@ class Button{
   }
 }
 
+class Checkbox{
+  constructor(id, callback, label, checked){
+    this.id = id;
+    this.label = label || id;
+    this.callback = callback;
+    this.checked = checked;
+  }
+  getElement(){
+    return `<input type="checkbox" id="${this.id}" ${this.checked ? "checked" : ""}></input>
+            <label for="${this.id}">${this.label}</label>`;
+  }
+  register(){
+    var self = this;
+    document.getElementById(this.id).onclick = function(){
+      var val = document.getElementById(self.id).checked;
+      self.callback(val);
+    };
+  }
+}
+
 class AdvancedViewer{
   constructor(object){
     this.object = object;

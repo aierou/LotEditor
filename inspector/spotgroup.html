@@ -5,6 +5,10 @@
 	<script>
 		window.onload = function(){
       var i = new Inspector(parent.inspecting, document.getElementById("inspector"));
+      i.addAccessor(new Checkbox("mirrored", function(val){
+        parent.inspecting.mirrored = val;
+        parent.inspecting.setLength(parent.inspecting.length);
+      }, "Mirrored", parent.inspecting.mirrored));
       i.addAccessor(new ValueSetter("length", function(val){
         val = parseInt(val, 10);
         if(isNaN(val)) return;

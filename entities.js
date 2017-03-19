@@ -153,20 +153,25 @@ classes["SpotGroup"] = class extends classes["Entity"]{
     this.spotHeight = SPOT_HEIGHT * SPOT_SCALE;
     this.rotation = 0;
     this.length = length;
+    this.mirrored = true;
 
     this.anchor.y = this.spotHeight;
   }
   setLength(length){
     this.length = length;
     this.removeAllChildren();
+
     for(var i = 0; i < length; i++){
       this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, 0, 180));
     }
-    for(var i = 0; i < length; i++){
-      this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, SPOT_HEIGHT * SPOT_SCALE, 0));
+    if(this.mirrored){
+      for(var i = 0; i < length; i++){
+        this.addChild(new Spot(i * SPOT_WIDTH * SPOT_SCALE, SPOT_HEIGHT * SPOT_SCALE, 0));
+      }
     }
     this.width = length * this.spotWidth;
-    this.height = 2 * this.spotHeight;
+    this.height = this.spotHeight;
+    if(this.mirrored) this.height *= 2;
   }
   onAdd(){
     // We call this here because if the group was just created, it needs
@@ -206,7 +211,7 @@ classes["Label"] = class extends classes["Entity"]{
 
     this.anchor = {x:this.width/2, y:this.height/2};
   }
-  drawPrimitive(){
+  drawPrimitive(ctx){
     ctx.save();
     ctx.font = this.font;
     ctx.fillText(this._text, 0, this.height);
@@ -258,6 +263,17 @@ function pointsToRectangle(pos1, pos2){
   var right = pos1.x > pos2.x ? pos1.x : pos2.x;
   var bottom = pos1.y > pos2.y ? pos1.y : pos2.y;
   return new Rectangle(left, top, right, bottom);
+}
+
+function getAbsoluteRect(el) {
+  el = el.getBoundingClientRect();
+  var ret = {
+    left: el.left + window.scrollX,
+    top: el.top + window.scrollY
+  }
+  ret.right = ret.left + el.width;
+  ret.bottom = ret.top + el.height;
+  return ret;
 }
 
 function cloneMatrix(m){

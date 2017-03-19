@@ -6,9 +6,12 @@ iframe{
 }
 #canvas-container{
   border: 1px solid;
-  width: 1280px;
-  height: 720px;
+  max-width: 1280px;
+  max-height: 720px;
   overflow:scroll;
+}
+#app{
+  width: 1800px;
 }
 body * {
   display: inline-block;

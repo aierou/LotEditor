@@ -23,6 +23,7 @@ window.onload = function(){
   canvas.addEventListener("mousemove", mouseMove);
   canvas.addEventListener("wheel", mouseScroll);
   container.addEventListener("mousemove", containerMouseMove);
+  document.addEventListener("keydown", keyDown);
 
   root = new Entity(0, 0);
   root.selectable = false;
@@ -66,7 +67,16 @@ function updateCanvasSize(){
   canvas.width = pos.x;
   canvas.height = pos.y;
 }
-
+function keyDown(evt){
+  switch(evt.key){
+    case "Delete":
+      for(var i = 0; i < selection.length; i++){
+        selection[i].parent.removeChild(selection[i]);
+      }
+      deselectAll();
+    break;
+  }
+}
 
 //Right; So; there was a noticeable loss of accuracy when performing a zoom.
 //This loss in accuracy was largely due to the imprecision of scroll bar position,
@@ -225,13 +235,14 @@ function drawSelector(){
     var start = getTransformedPoint(mouseDownPosition);
     ctx.save();
     ctx.setLineDash([10, 10]); //For some reason this is leaking out of the saved context.
+    ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(start.x, currentMouse.y);
     ctx.lineTo(currentMouse.x, currentMouse.y);
     ctx.lineTo(currentMouse.x, start.y);
     ctx.lineTo(start.x, start.y);
     ctx.stroke();
-    ctx.setLineDash([0]); //This doesn't help.
+    //ctx.setLineDash([0]); //This doesn't help.
     ctx.restore();
   }
 }
@@ -305,6 +316,7 @@ function deselectAll(){
 var inspecting;
 var inspector_current;
 function updateInspector(){
+  var prev_inspecting = inspecting;
   inspecting = null;
   if(selection.length > 0) inspecting = selection[selection.length - 1];
   var inspector = document.getElementById("inspector");
@@ -326,7 +338,7 @@ function updateInspector(){
       break;
     }
   }
-  if(src != inspector_current){
+  if(src != inspector_current || prev_inspecting != inspecting){
     inspector.src = inspector_current = src;
   }
 }
